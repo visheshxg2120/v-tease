@@ -29,6 +29,8 @@ class Runtime {
   peaks = new Map<string, Peaks>();
   missing = new Set<string>();
   videos = new Map<string, VideoSource>();
+  /** Second element per source for the framing editor / cursor analysis, so preview sync can't move it. */
+  private scrubbers = new Map<string, VideoSource>();
   demo: DemoSource | null = null;
   placeholders = new Map<string, AudioBuffer>();
   private envelopes = new WeakMap<AudioBuffer, VoiceEnv>();
@@ -145,6 +147,18 @@ class Runtime {
     vs.onFrame = () => this.bump();
     this.videos.set(src.id, vs);
     return src;
+  }
+
+  scrubSource(s: Source): VideoSource | null {
+    if (s.kind !== 'video' || !s.assetId) return null;
+    let vs = this.scrubbers.get(s.id);
+    if (!vs) {
+      const url = this.urls.get(s.assetId);
+      if (!url) return null;
+      vs = new VideoSource(url);
+      this.scrubbers.set(s.id, vs);
+    }
+    return vs;
   }
 
   // ---------- voices ----------

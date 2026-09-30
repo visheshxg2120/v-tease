@@ -1,6 +1,6 @@
 import { useStore } from './store';
 import { rt } from './runtime';
-import type { Block, BlockKind, CommandBlock, Project, ShotBlock, StylePreset } from '../model/types';
+import type { Block, BlockKind, CommandBlock, Framing, Project, ShotBlock, StylePreset } from '../model/types';
 import { blockEnd, shotSourceAt, spb, uid } from '../model/beats';
 import { THEMES, emptyProject, newCommand, newEnd, newShot, newSticker, newTitle, sampleProject } from '../model/sample';
 import { detectBeats } from '../audio/analyze';
@@ -101,11 +101,23 @@ export async function importRecording(file?: File | null) {
   st().update((p) => {
     p.assets.push(meta);
     p.sources.push(src);
-    // retarget shots on the demo recording (sample project) to the real one
-    for (const b of p.blocks) if (b.kind === 'shot' && p.sources.find((s) => s.id === b.sourceId)?.kind === 'demo') b.sourceId = src.id;
+    // retarget shots on the demo recording (sample project) to the real one, scaling framings to its size
+    for (const b of p.blocks) {
+      const old = b.kind === 'shot' ? p.sources.find((s) => s.id === b.sourceId) : null;
+      if (b.kind !== 'shot' || old?.kind !== 'demo') continue;
+      b.sourceId = src.id;
+      b.framingStart = scaleFraming(b.framingStart, src.width / old.width, src.height / old.height);
+      b.framingEnd = scaleFraming(b.framingEnd, src.width / old.width, src.height / old.height);
+    }
   });
   const res = src.width < 2000 ? ' — note: sub-Retina source, deep zooms will look soft' : '';
   st().showToast(`Imported ${src.width}×${src.height}, ${src.duration.toFixed(1)}s${res}`);
+}
+
+function scaleFraming(f: Framing, sx: number, sy: number): Framing {
+  if (f.kind === 'anchor') return { ...f, x: f.x * sx, y: f.y * sy };
+  if (f.kind === 'window') return { ...f, rect: { x: f.rect.x * sx, y: f.rect.y * sy, w: f.rect.w * sx, h: f.rect.h * sy } };
+  return f;
 }
 
 export async function importLogo(file?: File | null) {
@@ -200,7 +212,7 @@ export async function detectCursorFor(shotId: string, onProgress: (f: number) =>
   if (!shot || !src) return;
   const getFrame = async (t: number): Promise<CanvasImageSource> => {
     if (src.kind === 'demo') return rt.demoSource().frame(t);
-    const vs = rt.videos.get(src.id)!;
+    const vs = rt.scrubSource(src)!;
     await vs.seekExact(t);
     return vs.el;
   };

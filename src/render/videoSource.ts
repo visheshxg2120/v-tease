@@ -1,3 +1,14 @@
+let holder: HTMLDivElement | null = null;
+/** Detached media elements can be starved of loading/decoding; keep them in the DOM, invisible. */
+function mediaHolder() {
+  if (!holder) {
+    holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:0;bottom:0;width:4px;height:4px;overflow:hidden;pointer-events:none;z-index:-1';
+    document.body.appendChild(holder);
+  }
+  return holder;
+}
+
 /** Wraps an HTMLVideoElement for preview sync (loose, rate-matched) and export (frame-exact seeks). */
 export class VideoSource {
   el: HTMLVideoElement;
@@ -13,10 +24,23 @@ export class VideoSource {
     el.playsInline = true;
     el.preload = 'auto';
     el.crossOrigin = 'anonymous';
+    el.style.width = '2px';
+    mediaHolder().appendChild(el);
     this.el = el;
+    let loaded = false;
     this.ready = new Promise((resolve, reject) => {
-      el.addEventListener('loadeddata', () => resolve(), { once: true });
+      el.addEventListener(
+        'loadeddata',
+        () => {
+          loaded = true;
+          resolve();
+        },
+        { once: true },
+      );
       el.addEventListener('error', () => reject(el.error), { once: true });
+      // Only for the initial load: nudge a stall once, then fail instead of hanging forever.
+      setTimeout(() => !loaded && el.load(), 4000);
+      setTimeout(() => !loaded && reject(new Error('Video failed to load')), 15000);
     });
     el.addEventListener('seeked', () => {
       this.seeking = false;
@@ -66,17 +90,28 @@ export class VideoSource {
     if (!this.el.paused) this.el.pause();
   }
 
-  /** Export: resolve once the frame at `t` is decoded. */
+  /** Export/analysis: resolve once the frame at `t` is decoded (re-seeks if something else moved it). */
   async seekExact(t: number) {
     const el = this.el;
+    await this.ready;
     if (!el.paused) el.pause();
-    if (Math.abs(el.currentTime - t) < 1e-4 && !this.seeking) return;
-    await new Promise<void>((resolve) => {
-      const done = () => resolve();
-      el.addEventListener('seeked', done, { once: true });
-      this.pendingSeek = null;
-      this.seeking = true;
-      el.currentTime = t;
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (Math.abs(el.currentTime - t) < 1e-3 && !this.seeking && el.readyState >= 2) return;
+      await new Promise<void>((resolve) => {
+        // a seek that never reports back must not hang export/analysis
+        const timer = setTimeout(resolve, 3000);
+        el.addEventListener(
+          'seeked',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+        this.pendingSeek = null;
+        this.seeking = true;
+        el.currentTime = t;
+      });
+    }
   }
 }

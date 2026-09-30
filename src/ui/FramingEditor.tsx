@@ -30,7 +30,7 @@ export function FramingEditor() {
     if (!src) return;
     let alive = true;
     (async () => {
-      if (src.kind === 'video') await rt.videos.get(src.id)?.seekExact(srcT);
+      if (src.kind === 'video') await rt.scrubSource(src)?.seekExact(srcT);
       if (alive) setFrameTick((x) => x + 1);
     })();
     return () => {
@@ -42,7 +42,7 @@ export function FramingEditor() {
     const c = canvasRef.current;
     if (!c || !src) return;
     const g = c.getContext('2d')!;
-    const img = src.kind === 'demo' ? rt.demoSource().frame(srcT) : rt.videos.get(src.id)?.el;
+    const img = src.kind === 'demo' ? rt.demoSource().frame(srcT) : rt.scrubSource(src)?.el;
     g.fillStyle = '#000';
     g.fillRect(0, 0, W, H);
     if (img) g.drawImage(img, 0, 0, W, H);

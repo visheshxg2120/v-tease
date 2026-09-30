@@ -3,6 +3,7 @@ import { App } from './App';
 import { player, startSync } from './state/player';
 import { useStore } from './state/store';
 import { rt } from './state/runtime';
+import * as actions from './state/actions';
 import './styles.css';
 
 // Geist for both UI and the canvas renderer (canvas needs the faces loaded before drawing).
@@ -19,6 +20,6 @@ for (const [weight, url] of faces) {
 
 startSync();
 
-// Handy from the devtools console: __studio.useStore.getState(), __studio.rt, __studio.player
-Object.assign(window, { __studio: { useStore, rt, player } });
+// Handy from the devtools console: __studio.useStore.getState(), __studio.rt, __studio.actions
+Object.assign(window, { __studio: { useStore, rt, player, actions } });
 createRoot(document.getElementById('root')!).render(<App />);

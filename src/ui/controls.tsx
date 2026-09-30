@@ -14,10 +14,10 @@ export function Section({ title, children, right }: { title: string; children: R
 
 export function Row({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
-    <label className="row" title={hint}>
+    <div className="row" title={hint}>
       <span className="row-label">{label}</span>
       <span className="row-ctl">{children}</span>
-    </label>
+    </div>
   );
 }
 
