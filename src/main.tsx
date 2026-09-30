@@ -8,9 +8,9 @@ import './styles.css';
 
 // Geist for both UI and the canvas renderer (canvas needs the faces loaded before drawing).
 const faces: [string, string][] = [
-  ['400', '/fonts/Geist-Regular.woff2'],
-  ['500', '/fonts/Geist-Medium.woff2'],
-  ['600', '/fonts/Geist-SemiBold.woff2'],
+  ['400', `${import.meta.env.BASE_URL}fonts/Geist-Regular.woff2`],
+  ['500', `${import.meta.env.BASE_URL}fonts/Geist-Medium.woff2`],
+  ['600', `${import.meta.env.BASE_URL}fonts/Geist-SemiBold.woff2`],
 ];
 for (const [weight, url] of faces) {
   const f = new FontFace('Geist', `url(${url})`, { weight });
