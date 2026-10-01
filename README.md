@@ -2,6 +2,8 @@
 
 A small local editor for music-synced product teasers made from screen recordings. It replaces After Effects for one format: short, beat-cut promos with zooms, command pills, title cards and an end card.
 
+**Live:** https://visheshxg2120.github.io/v-tease/ (deployed by `.github/workflows/pages.yml` on every push)
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
